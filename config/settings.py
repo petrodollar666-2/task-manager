@@ -31,7 +31,12 @@ DEBUG = os.environ.get("DEBUG", "1") == "1"
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*" if DEBUG else "localhost,127.0.0.1").split(",")
 
 # Khi đưa ra Internet qua Cloudflare Tunnel (xem run_public.sh)
-CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o]
+if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
+    ALLOWED_HOSTS.append(os.environ["RENDER_EXTERNAL_HOSTNAME"])
+    CSRF_TRUSTED_ORIGINS_EXTRA = ["https://" + os.environ["RENDER_EXTERNAL_HOSTNAME"]]
+else:
+    CSRF_TRUSTED_ORIGINS_EXTRA = []
+CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o] + CSRF_TRUSTED_ORIGINS_EXTRA
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
@@ -105,6 +110,16 @@ DATABASES = {
         "PORT": os.environ.get("DB_PORT", "5432"),
     }
 }
+
+# Máy chủ đám mây (Render...) cấp sẵn DATABASE_URL
+if os.environ.get("DATABASE_URL"):
+    from urllib.parse import urlparse
+
+    _u = urlparse(os.environ["DATABASE_URL"])
+    DATABASES["default"].update(
+        NAME=_u.path.lstrip("/"), USER=_u.username, PASSWORD=_u.password or "",
+        HOST=_u.hostname, PORT=str(_u.port or 5432),
+    )
 
 
 # Password validation
