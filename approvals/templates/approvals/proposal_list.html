@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load taskui %}
+{% block title %}Tờ trình{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <h1 class="text-2xl font-semibold">{% if user.is_boss %}Tất cả tờ trình{% else %}Tờ trình của tôi{% endif %}</h1>
+    <p class="text-sm text-slate-500">{{ proposals|length }} tờ trình{% if has_filter %} phù hợp bộ lọc{% endif %}</p>
+  </div>
+  <a href="{% url 'approvals:create' %}" class="rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">+ Tờ trình mới</a>
+</div>
+
+<form method="get" class="mt-4 grid gap-2 rounded-xl border bg-white p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+  <select name="status" aria-label="Trạng thái" class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+    <option value="">Mọi trạng thái</option>
+    {% for value, label in statuses %}<option value="{{ value }}" {% if f.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="kind" aria-label="Loại" class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+    <option value="">Tất cả loại</option>
+    {% for value, label in kinds %}<option value="{{ value }}" {% if f.kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <div class="flex gap-2">
+    <button type="submit" class="flex-1 rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-900">Lọc</button>
+    {% if has_filter %}<a href="{% url 'approvals:list' %}" class="rounded border px-3 py-2 text-sm hover:bg-slate-50">Xoá lọc</a>{% endif %}
+  </div>
+</form>
+
+{% if proposals %}
+<ul class="mt-6 space-y-3">
+  {% for p in proposals %}
+  <li>
+    <a href="{% url 'approvals:detail' p.pk %}" class="block rounded-xl border bg-white p-4 shadow-sm hover:border-indigo-200 hover:bg-slate-50 sm:p-5">
+      <div class="flex flex-wrap items-start justify-between gap-2">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="break-words font-medium text-slate-900">{{ p.title }}</span>
+            {% badge p.kind p.get_kind_display %}
+            {% badge p.status p.get_status_display %}
+          </div>
+          <p class="mt-0.5 text-xs text-slate-500">
+            {{ p.owner }}{% if p.project %} · {{ p.project }}{% endif %}{% if p.amount %} · {{ p.amount|vnd }}{% endif %}{% if p.submitted_at %} · trình ngày {{ p.submitted_at|date:"d/m/Y" }}{% endif %}
+          </p>
+        </div>
+        <span class="whitespace-nowrap text-sm font-semibold {% if p.n_total and p.n_signed == p.n_total %}text-green-700{% else %}text-slate-700{% endif %}">Đã ký {{ p.n_signed }}/{{ p.n_total }}</span>
+      </div>
+      <div class="mt-3">{% progress_bar p.n_signed|percent:p.n_total %}</div>
+      <div class="mt-2 text-sm">
+        {% if not p.n_total %}
+          <span class="text-slate-400">Chưa có chặng ký</span>
+        {% elif not p.cur %}
+          <span class="font-medium text-green-700">✓ Đã ký đủ</span>
+        {% elif p.cur.status == "rejected" %}
+          <span class="font-medium text-red-700">Bị trả lại tại: {{ p.cur.department }}</span>
+        {% else %}
+          <span class="text-slate-500">Đang ở:</span> <span class="font-medium">{{ p.cur.department }}</span>
+        {% endif %}
+      </div>
+      {% if p.missing %}
+        <p class="mt-1 text-xs text-slate-500">
+          Còn thiếu: {% for s in p.missing %}{{ s.department }}{% if s.signer_name %} ({{ s.signer_name }}){% endif %}{% if not forloop.last %}; {% endif %}{% endfor %}
+        </p>
+      {% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+  <div class="mt-6 rounded-xl border border-dashed bg-white p-10 text-center text-slate-500">
+    {% if has_filter %}Không có tờ trình nào phù hợp bộ lọc.{% else %}Chưa có tờ trình nào. <a href="{% url 'approvals:create' %}" class="text-indigo-600 hover:underline">Tạo tờ trình đầu tiên</a>.{% endif %}
+  </div>
+{% endif %}
+{% endblock %}

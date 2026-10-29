@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Sửa chặng ký{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-3xl">
+  <a href="{% url 'approvals:detail' proposal.pk %}" class="text-sm text-indigo-600 hover:underline">← {{ proposal.title }}</a>
+  <h1 class="mt-2 text-2xl font-semibold">Sửa chặng ký</h1>
+  <form method="post" class="mt-4 space-y-5 rounded-xl border bg-white p-5 shadow-sm">
+    {% csrf_token %}
+    {% include "tasks/_form_fields.html" %}
+    <div class="flex flex-wrap justify-end gap-2 border-t pt-4">
+      <a href="{% url 'approvals:detail' proposal.pk %}" class="rounded border px-4 py-2 hover:bg-slate-50">Huỷ</a>
+      <button type="submit" class="rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">Lưu</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

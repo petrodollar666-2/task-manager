@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{% if proposal %}Sửa tờ trình{% else %}Tờ trình mới{% endif %}{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-3xl">
+  <a href="{% if proposal %}{% url 'approvals:detail' proposal.pk %}{% else %}{% url 'approvals:list' %}{% endif %}" class="text-sm text-indigo-600 hover:underline">← Quay lại</a>
+  <h1 class="mt-2 text-2xl font-semibold">{% if proposal %}Sửa tờ trình{% else %}Tạo tờ trình mới{% endif %}</h1>
+  {% if not proposal %}
+    <p class="mt-1 text-sm text-slate-500">Tuyến ký mặc định sẽ được tạo theo loại tờ trình; bạn có thể thêm, bớt, đổi thứ tự sau.</p>
+  {% endif %}
+  <form method="post" enctype="multipart/form-data" class="mt-4 space-y-5 rounded-xl border bg-white p-5 shadow-sm">
+    {% csrf_token %}
+    {% include "tasks/_form_fields.html" %}
+    <div class="flex flex-wrap justify-end gap-2 border-t pt-4">
+      <a href="{% if proposal %}{% url 'approvals:detail' proposal.pk %}{% else %}{% url 'approvals:list' %}{% endif %}" class="rounded border px-4 py-2 hover:bg-slate-50">Huỷ</a>
+      <button type="submit" class="rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">{% if proposal %}Lưu thay đổi{% else %}Tạo tờ trình{% endif %}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

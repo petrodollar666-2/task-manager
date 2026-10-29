@@ -1,0 +1,142 @@
+{% load taskui %}
+<div id="proposal-panel" class="space-y-6">
+  {# ---------- Tình trạng chung ---------- #}
+  <section class="rounded-xl border bg-white p-5 shadow-sm">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div class="min-w-0">
+        <div class="flex flex-wrap items-center gap-2">
+          {% badge proposal.status proposal.get_status_display %}
+          <span class="text-sm text-slate-600">Đã ký <span class="font-semibold text-slate-900">{{ signed }}/{{ total }}</span></span>
+        </div>
+        <p class="mt-2 text-sm">
+          {% if proposal.status == "approved" %}
+            <span class="font-medium text-green-700">✓ Đã ký đủ</span>
+          {% elif proposal.status == "rejected" and current_stage %}
+            <span class="font-medium text-red-700">Bị trả lại tại: {{ current_stage.department }}</span>
+          {% elif current_stage %}
+            Đang ở: <span class="font-medium">{{ current_stage.department }}</span>{% if current_stage.signer_name %} <span class="text-slate-500">— {{ current_stage.signer_name }}</span>{% endif %}
+          {% else %}
+            <span class="text-slate-500">Chưa có chặng ký nào.</span>
+          {% endif %}
+        </p>
+        {% if proposal.submitted_at %}<p class="mt-1 text-xs text-slate-500">Ngày trình: {{ proposal.submitted_at|date:"d/m/Y" }}</p>{% endif %}
+      </div>
+      {% if proposal.status == "draft" or proposal.status == "rejected" %}
+      <form method="post" action="{% url 'approvals:submit' proposal.pk %}"
+            hx-post="{% url 'approvals:submit' proposal.pk %}" hx-target="#proposal-panel" hx-swap="outerHTML">
+        {% csrf_token %}
+        <button type="submit" class="rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+          {% if proposal.status == "rejected" %}Nộp lại{% else %}Nộp trình ký{% endif %}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    <div class="mt-3">{% progress_bar signed|percent:total "h-2.5" %}</div>
+    {% if missing and proposal.status != "approved" %}
+      <p class="mt-3 text-sm text-slate-600">
+        <span class="text-slate-500">Còn thiếu ({{ missing|length }}):</span>
+        {% for s in missing %}{{ s.department }}{% if s.signer_name %} ({{ s.signer_name }}){% endif %}{% if not forloop.last %}; {% endif %}{% endfor %}
+      </p>
+    {% endif %}
+  </section>
+
+  {# ---------- Tuyến ký ---------- #}
+  <section class="rounded-xl border bg-white p-5 shadow-sm">
+    <h2 class="text-lg font-semibold">Tuyến ký</h2>
+    {% if stages %}
+    <ol class="ml-3 mt-5 border-l-2 border-slate-200">
+      {% for s in stages %}
+      <li class="relative pb-6 pl-6 last:pb-0">
+        <span class="absolute -left-[13px] top-0 flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ring-4 ring-white
+          {% if s.status == 'signed' %}bg-green-500 text-white{% elif s.status == 'rejected' %}bg-red-500 text-white{% elif s.pk == current_stage.pk %}bg-amber-400 text-white{% else %}bg-slate-200 text-slate-600{% endif %}">
+          {% if s.status == 'signed' %}✓{% elif s.status == 'rejected' %}!{% else %}{{ forloop.counter }}{% endif %}
+        </span>
+        <div class="{% if s.pk == current_stage.pk %}rounded-lg border border-indigo-200 bg-indigo-50/60 p-3{% endif %}">
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="font-medium">{{ s.department }}</p>
+            {% badge s.status s.get_status_display %}
+            {% if s.pk == current_stage.pk and s.status == 'pending' %}<span class="text-xs font-medium text-indigo-600">● Đang ở đây</span>{% endif %}
+          </div>
+          {% if s.signer_name %}<p class="text-sm text-slate-600">{{ s.signer_name }}</p>{% endif %}
+          {% if s.signed_at %}<p class="mt-0.5 text-xs text-green-700">Đã ký lúc {{ s.signed_at|date:"H:i d/m/Y" }}</p>{% endif %}
+          {% if s.note %}<p class="mt-1 whitespace-pre-line rounded bg-slate-50 px-2 py-1 text-xs {% if s.status == 'rejected' %}text-red-700{% else %}text-slate-600{% endif %}">Ghi chú: {{ s.note }}</p>{% endif %}
+
+          {% if editable and s.pk == current_stage.pk and s.status == 'pending' %}
+          <div class="mt-3 flex flex-wrap items-start gap-2">
+            <form method="post" action="{% url 'approvals:stage_sign' s.pk %}"
+                  hx-post="{% url 'approvals:stage_sign' s.pk %}" hx-target="#proposal-panel" hx-swap="outerHTML">
+              {% csrf_token %}
+              <button type="submit" class="rounded bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700">✓ Đánh dấu đã ký</button>
+            </form>
+            <details class="group">
+              <summary class="cursor-pointer list-none rounded border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">Trả lại</summary>
+              <form method="post" action="{% url 'approvals:stage_reject' s.pk %}"
+                    hx-post="{% url 'approvals:stage_reject' s.pk %}" hx-target="#proposal-panel" hx-swap="outerHTML"
+                    class="mt-2 w-full space-y-2 sm:w-80">
+                {% csrf_token %}
+                <textarea name="note" rows="2" placeholder="Lý do trả lại / yêu cầu chỉnh sửa…" aria-label="Lý do trả lại"
+                  class="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"></textarea>
+                <button type="submit" class="rounded bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700">Xác nhận trả lại</button>
+              </form>
+            </details>
+          </div>
+          {% elif s.status == 'rejected' and proposal.status == 'rejected' %}
+            <p class="mt-2 text-xs text-slate-500">Chỉnh sửa hồ sơ theo góp ý rồi bấm <b>Nộp lại</b>.</p>
+          {% endif %}
+
+          <div class="mt-2 flex flex-wrap items-center gap-1 text-xs">
+            {% if s.status == 'signed' %}
+              <form method="post" action="{% url 'approvals:stage_reset' s.pk %}"
+                    hx-post="{% url 'approvals:stage_reset' s.pk %}" hx-target="#proposal-panel" hx-swap="outerHTML"
+                    hx-confirm="Hoàn tác chữ ký ở “{{ s.department }}”?">
+                {% csrf_token %}
+                <button type="submit" class="rounded px-2 py-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800">Hoàn tác</button>
+              </form>
+            {% endif %}
+            {% if editable %}
+              {% if not forloop.first %}
+              <form method="post" action="{% url 'approvals:stage_move' s.pk 'up' %}"
+                    hx-post="{% url 'approvals:stage_move' s.pk 'up' %}" hx-target="#proposal-panel" hx-swap="outerHTML">
+                {% csrf_token %}
+                <button type="submit" class="rounded px-2 py-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800" title="Chuyển lên">↑ Lên</button>
+              </form>
+              {% endif %}
+              {% if not forloop.last %}
+              <form method="post" action="{% url 'approvals:stage_move' s.pk 'down' %}"
+                    hx-post="{% url 'approvals:stage_move' s.pk 'down' %}" hx-target="#proposal-panel" hx-swap="outerHTML">
+                {% csrf_token %}
+                <button type="submit" class="rounded px-2 py-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800" title="Chuyển xuống">↓ Xuống</button>
+              </form>
+              {% endif %}
+              <a href="{% url 'approvals:stage_edit' s.pk %}" class="rounded px-2 py-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800">Sửa</a>
+              <form method="post" action="{% url 'approvals:stage_delete' s.pk %}"
+                    hx-post="{% url 'approvals:stage_delete' s.pk %}" hx-target="#proposal-panel" hx-swap="outerHTML"
+                    hx-confirm="Xoá chặng ký “{{ s.department }}”?">
+                {% csrf_token %}
+                <button type="submit" class="rounded px-2 py-1 text-red-500 hover:bg-red-50 hover:text-red-700">Xoá</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+      <p class="mt-4 rounded-lg border border-dashed p-4 text-center text-sm text-slate-500">Chưa có chặng ký nào. Thêm chặng bên dưới.</p>
+    {% endif %}
+
+    {% if editable %}
+    <form method="post" action="{% url 'approvals:stage_add' proposal.pk %}"
+          hx-post="{% url 'approvals:stage_add' proposal.pk %}" hx-target="#proposal-panel" hx-swap="outerHTML"
+          class="mt-5 border-t pt-4">
+      {% csrf_token %}
+      <p class="mb-2 text-sm font-medium text-slate-700">Thêm chặng ký</p>
+      <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+        <div>{{ stage_form.department }}{% for e in stage_form.department.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}</div>
+        <div>{{ stage_form.signer_name }}</div>
+        <button type="submit" class="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700">+ Thêm</button>
+      </div>
+    </form>
+    {% endif %}
+  </section>
+</div>

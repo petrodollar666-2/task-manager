@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-xl">
+  <h1 class="mb-4 text-2xl font-semibold text-slate-900">{{ title }}</h1>
+  <form method="post" class="space-y-4 rounded-xl border bg-white p-5 shadow-sm" novalidate>
+    {% csrf_token %}
+    {% include "availability/_form_fields.html" %}
+    <div class="flex flex-wrap gap-2 pt-2">
+      <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">Lưu</button>
+      <a href="{{ cancel_url }}" class="rounded-lg border px-4 py-2 text-sm hover:bg-slate-50">Huỷ</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

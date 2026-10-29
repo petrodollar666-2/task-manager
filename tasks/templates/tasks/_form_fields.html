@@ -1,0 +1,15 @@
+{% if form.non_field_errors %}
+  <div class="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+    {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+  </div>
+{% endif %}
+{% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+<div class="grid gap-4 sm:grid-cols-2">
+  {% for field in form.visible_fields %}
+    {% if field.field.widget.input_type == "textarea" or field.field.widget.attrs.rows %}
+      {% include "tasks/_field.html" with wrap="sm:col-span-2" %}
+    {% else %}
+      {% include "tasks/_field.html" %}
+    {% endif %}
+  {% endfor %}
+</div>

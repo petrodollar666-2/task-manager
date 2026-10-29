@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Xoá tài liệu{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-lg rounded-xl border bg-white p-5 shadow-sm">
+  <h1 class="text-xl font-semibold">Xoá tài liệu?</h1>
+  <p class="mt-2 text-slate-600">Bạn có chắc muốn xoá “<strong>{{ doc.name }}</strong>”? {% if doc.file %}File đã tải lên cũng sẽ bị xoá. {% endif %}Thao tác này không thể hoàn tác.</p>
+  {% if doc.source == "drive" %}<p class="mt-2 text-sm text-amber-700">Lưu ý: file trên Google Drive không bị xoá; lần đồng bộ sau tài liệu có thể xuất hiện lại.</p>{% endif %}
+  <form method="post" class="mt-5 flex gap-3">
+    {% csrf_token %}
+    <button type="submit" class="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700">Xoá</button>
+    <a href="{% url 'files:detail' doc.pk %}" class="rounded border px-4 py-2 hover:bg-slate-100">Huỷ</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Lịch dạy{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="text-2xl font-semibold text-slate-900">{% if user.is_boss %}Lịch dạy giảng viên{% else %}Lịch dạy của tôi{% endif %}</h1>
+    <p class="text-sm text-slate-500">Học kỳ hiện tại · hôm nay {{ today|date:"d/m/Y" }}</p>
+  </div>
+  <div class="flex flex-wrap items-center gap-2">
+    {% if teachers is not None %}
+      <form method="get" class="flex items-center gap-2">
+        <label for="teacher" class="sr-only">Giảng viên</label>
+        <select id="teacher" name="teacher" onchange="this.form.submit()" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+          <option value="">Tất cả giảng viên</option>
+          {% for t in teachers %}<option value="{{ t.pk }}" {% if t.pk == teacher_id %}selected{% endif %}>{{ t }}</option>{% endfor %}
+        </select>
+        <noscript><button class="rounded-lg border px-3 py-2 text-sm">Lọc</button></noscript>
+      </form>
+    {% endif %}
+    <a href="{% url 'availability:slot_create' %}{% if teachers is not None and teacher_id %}?teacher={{ teacher_id }}{% endif %}" class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">+ Thêm buổi dạy</a>
+    <a href="{% url 'availability:absence_create' %}{% if teachers is not None and teacher_id %}?teacher={{ teacher_id }}{% endif %}" class="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-50">+ Vắng mặt</a>
+  </div>
+</div>
+
+<section class="rounded-xl border bg-white p-5 shadow-sm">
+  <h2 class="mb-3 text-lg font-semibold text-slate-900">Thời khoá biểu tuần</h2>
+  {% if not has_current %}
+    <p class="mb-3 text-sm text-slate-500">Chưa có buổi dạy nào trong học kỳ hiện tại.</p>
+  {% endif %}
+  <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
+    {% for col in columns %}
+      <div class="rounded-lg border {% if col.is_today %}border-indigo-300 bg-indigo-50/50{% else %}bg-slate-50{% endif %} p-2">
+        <div class="mb-2 text-center text-sm font-semibold {% if col.is_today %}text-indigo-700{% else %}text-slate-700{% endif %}">{{ col.label }}{% if col.is_today %} <span class="text-xs font-normal">(hôm nay)</span>{% endif %}</div>
+        <div class="space-y-2">
+          {% for s in col.slots %}
+            <div class="rounded-md border bg-white p-2 text-sm shadow-sm {% if s.is_now %}border-amber-400 ring-2 ring-amber-200{% endif %}">
+              <div class="font-medium tabular-nums text-slate-900">{{ s.start_time|time:"H:i" }}–{{ s.end_time|time:"H:i" }}</div>
+              <div class="text-slate-700">{{ s.course }}</div>
+              {% if s.room %}<div class="text-xs text-slate-500">Phòng {{ s.room }}</div>{% endif %}
+              {% if user.is_boss and not teacher_id %}<div class="text-xs text-indigo-700">{{ s.teacher }}</div>{% endif %}
+              {% if s.is_now %}<span class="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Đang lên lớp</span>{% endif %}
+              <div class="mt-1 flex gap-3 text-xs">
+                <a href="{% url 'availability:slot_edit' s.pk %}{% if user.is_boss and teacher_id %}?teacher={{ teacher_id }}{% endif %}" class="text-indigo-600 hover:underline">Sửa</a>
+                <a href="{% url 'availability:slot_delete' s.pk %}{% if user.is_boss and teacher_id %}?teacher={{ teacher_id }}{% endif %}" class="text-red-600 hover:underline">Xoá</a>
+              </div>
+            </div>
+          {% empty %}
+            <div class="py-2 text-center text-xs text-slate-400">Không có tiết</div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+{% if other_slots %}
+<section class="mt-6 rounded-xl border bg-white p-5 shadow-sm">
+  <h2 class="mb-3 text-lg font-semibold text-slate-900">Lịch dạy học kỳ sau</h2>
+  <ul class="divide-y text-sm">
+    {% for s in other_slots %}
+      <li class="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between">
+        <div><span class="font-medium">{{ s.get_weekday_display }} {{ s.start_time|time:"H:i" }}–{{ s.end_time|time:"H:i" }}</span> · {{ s.course }}{% if s.room %} · Phòng {{ s.room }}{% endif %}{% if user.is_boss and not teacher_id %} · <span class="text-indigo-700">{{ s.teacher }}</span>{% endif %}</div>
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span>{{ s.term_start|date:"d/m/Y" }} – {{ s.term_end|date:"d/m/Y" }}</span>
+          <a href="{% url 'availability:slot_edit' s.pk %}" class="text-indigo-600 hover:underline">Sửa</a>
+          <a href="{% url 'availability:slot_delete' s.pk %}" class="text-red-600 hover:underline">Xoá</a>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="mt-6 rounded-xl border bg-white p-5 shadow-sm">
+  <h2 class="mb-3 text-lg font-semibold text-slate-900">Công tác / nghỉ phép / họp</h2>
+  <ul class="divide-y">
+    {% for a in absences %}
+      <li class="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="text-sm">
+          <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {% if a.kind == 'leave' or a.kind == 'other' %}bg-slate-200 text-slate-700{% else %}bg-purple-100 text-purple-800{% endif %}">{{ a.get_kind_display }}</span>
+          {% if a.start <= now %}<span class="ml-1 inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">Đang diễn ra</span>{% endif %}
+          {% if user.is_boss %}<span class="ml-1 font-medium text-slate-900">{{ a.user }}</span>{% endif %}
+          {% if a.note %}<span class="text-slate-600">· {{ a.note }}</span>{% endif %}
+        </div>
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span class="tabular-nums">{{ a.start|date:"d/m/Y H:i" }} – {{ a.end|date:"d/m/Y H:i" }}</span>
+          <a href="{% url 'availability:absence_edit' a.pk %}{% if user.is_boss and teacher_id %}?teacher={{ teacher_id }}{% endif %}" class="text-indigo-600 hover:underline">Sửa</a>
+          <a href="{% url 'availability:absence_delete' a.pk %}{% if user.is_boss and teacher_id %}?teacher={{ teacher_id }}{% endif %}" class="text-red-600 hover:underline">Xoá</a>
+        </div>
+      </li>
+    {% empty %}
+      <li class="py-3 text-sm text-slate-500">Không có lịch vắng mặt nào sắp tới.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

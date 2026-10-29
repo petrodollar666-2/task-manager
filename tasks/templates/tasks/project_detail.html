@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load taskui %}
+{% block title %}{{ project.title }}{% endblock %}
+{% block content %}
+<a href="{% url 'tasks:list' %}" class="text-sm text-indigo-600 hover:underline">← Danh sách đầu việc</a>
+
+<div class="mt-2 rounded-xl border bg-white p-5 shadow-sm">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div class="min-w-0">
+      <div class="flex flex-wrap items-center gap-2">
+        {% badge project.kind project.get_kind_display %}
+        {% badge project.status project.get_status_display %}
+        {% if project.is_overdue %}{% badge "overdue" "Quá hạn" %}{% endif %}
+      </div>
+      <h1 class="mt-2 break-words text-2xl font-semibold">{{ project.title }}</h1>
+      {% if project.series %}<p class="text-sm text-slate-500">{{ project.series }}</p>{% endif %}
+    </div>
+    {% if can_edit %}
+    <div class="flex shrink-0 gap-2">
+      <a href="{% url 'tasks:edit' project.pk %}" class="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700">Sửa</a>
+      <form method="post" action="{% url 'tasks:delete' project.pk %}" onsubmit="return confirm('Xoá đầu việc này cùng toàn bộ các bước?');">
+        {% csrf_token %}
+        <button type="submit" class="rounded border border-red-200 px-4 py-2 text-sm text-red-600 hover:bg-red-50">Xoá</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <dl class="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+    <div><dt class="text-slate-500">Người phụ trách</dt><dd class="font-medium">{{ project.owner }}</dd></div>
+    <div><dt class="text-slate-500">Ngày diễn ra</dt><dd class="font-medium">{{ project.event_date|date:"d/m/Y"|default:"—" }}</dd></div>
+    <div><dt class="text-slate-500">Hạn hoàn thành</dt><dd class="font-medium {% if project.is_overdue %}text-red-600{% endif %}">{{ project.deadline|date:"d/m/Y"|default:"—" }}</dd></div>
+    <div><dt class="text-slate-500">Bước hiện tại</dt><dd class="font-medium">{{ current_step.name|default:"Đã xong tất cả" }}</dd></div>
+  </dl>
+  {% if project.description %}
+    <p class="mt-4 whitespace-pre-line border-t pt-4 text-sm text-slate-700">{{ project.description }}</p>
+  {% endif %}
+</div>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-3">
+  <div class="min-w-0 lg:col-span-2">
+    {% include "tasks/_steps.html" %}
+  </div>
+
+  <div class="min-w-0 space-y-6">
+    <section class="rounded-xl border bg-white p-5 shadow-sm">
+      <div class="flex items-center justify-between gap-2">
+        <h2 class="text-lg font-semibold">Tờ trình liên quan</h2>
+        {% if can_edit %}<a href="{% url 'approvals:create' %}?project={{ project.pk }}" class="text-sm text-indigo-600 hover:underline">+ Tạo tờ trình</a>{% endif %}
+      </div>
+      <ul class="mt-3 space-y-3">
+        {% for p in proposals %}
+          {% with signed=p.signed_count total=p.total_count %}
+          <li>
+            <a href="{% url 'approvals:detail' p.pk %}" class="block rounded-lg border p-3 hover:bg-slate-50">
+              <div class="flex items-start justify-between gap-2">
+                <span class="min-w-0 break-words text-sm font-medium">{{ p.title }}</span>
+                {% badge p.status p.get_status_display %}
+              </div>
+              <p class="mt-1 text-xs text-slate-500">Đã ký {{ signed }}/{{ total }}</p>
+              <div class="mt-1.5">{% progress_bar signed|percent:total "h-1.5" %}</div>
+            </a>
+          </li>
+          {% endwith %}
+        {% empty %}
+          <li class="text-sm text-slate-500">Chưa có tờ trình nào.</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="rounded-xl border bg-white p-5 shadow-sm">
+      <h2 class="text-lg font-semibold">Tài liệu</h2>
+      <ul class="mt-3 divide-y text-sm">
+        {% for doc in documents %}
+          <li class="py-2"><a href="{% url 'files:download' doc.pk %}" class="break-words text-indigo-600 hover:underline">📄 {{ doc.name }}</a></li>
+        {% empty %}
+          <li class="py-2 text-slate-500">Chưa có tài liệu nào.</li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load taskui %}
+{% block title %}{% if user.is_boss %}Đầu việc{% else %}Việc của tôi{% endif %}{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <h1 class="text-2xl font-semibold">{% if user.is_boss %}Tất cả đầu việc{% else %}Việc của tôi{% endif %}</h1>
+    <p class="text-sm text-slate-500">{{ projects|length }} đầu việc{% if has_filter %} phù hợp bộ lọc{% endif %}</p>
+  </div>
+  <a href="{% url 'tasks:create' %}" class="rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">+ Đầu việc mới</a>
+</div>
+
+<form method="get" class="mt-4 grid gap-2 rounded-xl border bg-white p-4 shadow-sm sm:grid-cols-2 {% if owners %}lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto]{% else %}lg:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))_auto]{% endif %}">
+  <input type="search" name="q" value="{{ f.q }}" placeholder="Tìm theo tên đầu việc…" aria-label="Tìm kiếm"
+         class="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+  <select name="kind" aria-label="Loại" class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+    <option value="">Tất cả loại</option>
+    {% for value, label in kinds %}<option value="{{ value }}" {% if f.kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="status" aria-label="Trạng thái" class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+    <option value="">Mọi trạng thái</option>
+    {% for value, label in statuses %}<option value="{{ value }}" {% if f.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  {% if owners %}
+  <select name="owner" aria-label="Người phụ trách" class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+    <option value="">Mọi người phụ trách</option>
+    {% for u in owners %}<option value="{{ u.pk }}" {% if f.owner == u.pk|stringformat:"d" %}selected{% endif %}>{{ u }}</option>{% endfor %}
+  </select>
+  {% endif %}
+  <div class="flex gap-2">
+    <button type="submit" class="flex-1 rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-900">Lọc</button>
+    {% if has_filter %}<a href="{% url 'tasks:list' %}" class="rounded border px-3 py-2 text-sm hover:bg-slate-50">Xoá lọc</a>{% endif %}
+  </div>
+</form>
+
+{% regroup projects by get_kind_display as groups %}
+{% for group in groups %}
+  <section class="mt-6">
+    <h2 class="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+      {{ group.grouper }} <span class="rounded-full bg-slate-200 px-2 text-xs font-medium text-slate-600">{{ group.list|length }}</span>
+    </h2>
+    <div class="overflow-hidden rounded-xl border bg-white shadow-sm">
+      <div class="hidden border-b bg-slate-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate-500 md:grid md:grid-cols-12 md:gap-4">
+        <div class="col-span-4">Đầu việc</div>
+        <div class="col-span-2">Phụ trách</div>
+        <div class="col-span-3">Bước hiện tại</div>
+        <div class="col-span-2">Tiến độ</div>
+        <div class="col-span-1">Hạn</div>
+      </div>
+      <ul class="divide-y">
+        {% for p in group.list %}
+        <li>
+          <a href="{% url 'tasks:detail' p.pk %}" class="block px-4 py-3 hover:bg-slate-50 md:grid md:grid-cols-12 md:items-center md:gap-4">
+            <div class="min-w-0 md:col-span-4">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="break-words font-medium text-slate-900">{{ p.title }}</span>
+                {% badge p.kind p.get_kind_display %}
+                {% if p.status != "active" %}{% badge p.status p.get_status_display %}{% endif %}
+                {% if not p.is_mine and not user.is_boss %}<span class="text-xs text-indigo-600">· được giao bước</span>{% endif %}
+              </div>
+              {% if p.series %}<p class="truncate text-xs text-slate-500">{{ p.series }}</p>{% endif %}
+            </div>
+            <div class="mt-1 text-sm text-slate-600 md:col-span-2 md:mt-0"><span class="text-slate-400 md:hidden">Phụ trách: </span>{{ p.owner }}</div>
+            <div class="mt-1 text-sm md:col-span-3 md:mt-0">
+              <span class="text-slate-400 md:hidden">Bước hiện tại: </span>
+              {% if p.cur %}
+                <span class="{% if p.cur.status == 'doing' %}text-amber-700{% else %}text-slate-700{% endif %}">{{ p.cur.name }}</span>
+              {% elif p.total_count %}
+                <span class="text-green-700">Đã xong tất cả</span>
+              {% else %}
+                <span class="text-slate-400">Chưa có bước</span>
+              {% endif %}
+            </div>
+            <div class="mt-2 flex items-center gap-2 md:col-span-2 md:mt-0">
+              <div class="flex-1">{% progress_bar p.pct %}</div>
+              <span class="w-9 text-right text-xs text-slate-500">{{ p.pct }}%</span>
+            </div>
+            <div class="mt-1 text-sm md:col-span-1 md:mt-0">
+              <span class="text-slate-400 md:hidden">Hạn: </span>
+              <span class="{% if p.is_overdue %}font-semibold text-red-600{% else %}text-slate-700{% endif %}">{{ p.deadline|date:"d/m/Y"|default:"—" }}</span>
+            </div>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+{% empty %}
+  <div class="mt-6 rounded-xl border border-dashed bg-white p-10 text-center text-slate-500">
+    {% if has_filter %}Không có đầu việc nào phù hợp bộ lọc.{% else %}Chưa có đầu việc nào. <a href="{% url 'tasks:create' %}" class="text-indigo-600 hover:underline">Tạo đầu việc đầu tiên</a>.{% endif %}
+  </div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Tổng quan{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-2">
+  <div>
+    <h1 class="text-2xl font-semibold text-slate-900">Tổng quan Khoa</h1>
+    <p class="text-sm text-slate-500">{{ now|date:"l, d/m/Y · H:i" }}</p>
+  </div>
+  <a href="{% url 'availability:schedule' %}" class="text-sm text-indigo-700 hover:underline">Xem lịch dạy →</a>
+</div>
+
+<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+  <a href="{% url 'tasks:list' %}" class="rounded-xl border bg-white p-5 shadow-sm hover:border-indigo-300">
+    <div class="text-sm text-slate-500">Đầu việc đang thực hiện</div>
+    <div class="mt-1 text-3xl font-semibold text-slate-900">{{ stats.active_projects }}</div>
+  </a>
+  <a href="{% url 'tasks:list' %}" class="rounded-xl border bg-white p-5 shadow-sm hover:border-indigo-300">
+    <div class="text-sm text-slate-500">Đầu việc quá hạn</div>
+    <div class="mt-1 text-3xl font-semibold {% if stats.overdue_projects %}text-red-600{% else %}text-slate-900{% endif %}">{{ stats.overdue_projects }}</div>
+  </a>
+  <a href="{% url 'approvals:list' %}" class="rounded-xl border bg-white p-5 shadow-sm hover:border-indigo-300">
+    <div class="text-sm text-slate-500">Tờ trình đang trình ký</div>
+    <div class="mt-1 text-3xl font-semibold text-slate-900">{{ stats.proposals_in_progress }}</div>
+  </a>
+  <a href="{% url 'availability:schedule' %}" class="rounded-xl border bg-white p-5 shadow-sm hover:border-indigo-300">
+    <div class="text-sm text-slate-500">Đang lên lớp lúc này</div>
+    <div class="mt-1 text-3xl font-semibold text-amber-600">{{ stats.teaching_now }}<span class="text-base font-normal text-slate-400">/{{ stats.members }}</span></div>
+    {% if stats.absent_now %}<div class="text-xs text-slate-500">{{ stats.absent_now }} người vắng mặt</div>{% endif %}
+  </a>
+</div>
+
+<section class="mt-6 overflow-hidden rounded-xl border bg-white shadow-sm">
+  <div class="flex items-center justify-between px-5 pt-5 pb-3">
+    <h2 class="text-lg font-semibold text-slate-900">Ai đang làm gì</h2>
+  </div>
+  {% include "availability/_member_table.html" %}
+</section>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-2">
+  <section class="rounded-xl border bg-white p-5 shadow-sm">
+    <h2 class="mb-3 text-lg font-semibold text-slate-900">Tờ trình đang chờ ký</h2>
+    <ul class="divide-y">
+      {% for pr in proposals %}
+        <li class="py-3">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <a href="{% url 'approvals:detail' pr.pk %}" class="font-medium text-indigo-700 hover:underline">{{ pr.title }}</a>
+            <span class="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">Đã ký {{ pr.signed }}/{{ pr.total }}</span>
+          </div>
+          <div class="mt-1 text-sm text-slate-500">
+            {% if pr.cur_stage %}Đang nằm ở: <span class="font-medium text-slate-700">{{ pr.cur_stage.department }}</span>{% if pr.cur_stage.signer_name %} ({{ pr.cur_stage.signer_name }}){% endif %}{% endif %}
+            · {{ pr.owner }}{% if pr.submitted_at %} · trình ngày {{ pr.submitted_at|date:"d/m/Y" }}{% endif %}
+          </div>
+        </li>
+      {% empty %}
+        <li class="py-3 text-sm text-slate-500">Không có tờ trình nào đang chờ ký.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="rounded-xl border bg-white p-5 shadow-sm">
+    <h2 class="mb-3 text-lg font-semibold text-slate-900">Workshop sắp tới <span class="text-sm font-normal text-slate-500">(30 ngày tới)</span></h2>
+    <ul class="divide-y">
+      {% for p in workshops %}
+        <li class="py-3">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <a href="{% url 'tasks:detail' p.pk %}" class="font-medium text-indigo-700 hover:underline">{{ p.title }}</a>
+            <span class="text-sm font-medium text-slate-700">{{ p.event_date|date:"d/m/Y" }}</span>
+          </div>
+          <div class="mt-1 text-xs text-slate-500">{{ p.owner }}{% if p.cur_step %} · Bước hiện tại: {{ p.cur_step.name }}{% endif %}</div>
+          <div class="mt-1 max-w-sm">{% include "availability/_progress.html" with pct=p.pct %}</div>
+        </li>
+      {% empty %}
+        <li class="py-3 text-sm text-slate-500">Không có workshop nào trong 30 ngày tới.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+
+<section class="mt-6 rounded-xl border bg-white p-5 shadow-sm">
+  <h2 class="mb-3 text-lg font-semibold text-slate-900">Việc quá hạn {% if overdue_steps %}<span class="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-sm font-medium text-red-700">{{ overdue_steps|length }}</span>{% endif %}</h2>
+  <ul class="divide-y">
+    {% for s in overdue_steps %}
+      <li class="flex flex-col gap-1 py-3 sm:flex-row sm:items-baseline sm:justify-between">
+        <div>
+          <span class="font-medium text-slate-900">{{ s.name }}</span>
+          <span class="text-sm text-slate-500">· <a href="{% url 'tasks:detail' s.project_id %}" class="text-indigo-700 hover:underline">{{ s.project.title }}</a></span>
+        </div>
+        <div class="text-sm text-slate-500">{{ s.assignee|default:"Chưa giao" }} · <span class="text-red-600">hạn {{ s.deadline|date:"d/m/Y" }}</span></div>
+      </li>
+    {% empty %}
+      <li class="py-3 text-sm text-slate-500">Không có việc nào quá hạn. 🎉</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

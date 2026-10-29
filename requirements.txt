@@ -1,0 +1,13 @@
+django>=5.1,<5.2
+psycopg[binary]
+pypdf
+python-docx
+openpyxl
+pytest
+pytest-django
+
+# Tuỳ chọn: đồng bộ Google Drive (python manage.py sync_drive)
+# google-api-python-client
+# google-auth
+whitenoise
+gunicorn

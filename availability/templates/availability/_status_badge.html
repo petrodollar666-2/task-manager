@@ -1,0 +1,1 @@
+<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset {{ status.badge_class }}">{% if status.is_teaching %}●{% elif status.is_absent %}◐{% else %}○{% endif %} {{ status.label }}</span>

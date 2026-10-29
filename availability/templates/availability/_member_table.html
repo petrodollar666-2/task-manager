@@ -1,0 +1,45 @@
+<div id="member-status" hx-get="{% url 'availability:status_table' %}" hx-trigger="every 60s" hx-swap="outerHTML">
+  <div class="hidden border-b bg-slate-50 px-5 py-2 text-xs font-medium uppercase tracking-wide text-slate-500 md:flex md:gap-4">
+    <div class="md:w-1/5">Giảng viên</div>
+    <div class="md:w-1/4">Trạng thái lúc này</div>
+    <div class="md:flex-1">Đầu việc đang làm · bước hiện tại</div>
+    <div class="md:w-20 md:text-right">Trễ hạn</div>
+  </div>
+  <ul class="divide-y">
+    {% for row in rows %}
+      <li class="flex flex-col gap-2 px-5 py-3 md:flex-row md:items-start md:gap-4">
+        <div class="md:w-1/5">
+          <div class="font-medium text-slate-900">{{ row.user }}</div>
+          {% if row.user.department %}<div class="text-xs text-slate-500">{{ row.user.department }}</div>{% endif %}
+        </div>
+        <div class="md:w-1/4">
+          {% include "availability/_status_badge.html" with status=row.status %}
+          {% include "availability/_status_detail.html" with status=row.status %}
+        </div>
+        <div class="space-y-2 md:flex-1">
+          {% for p in row.projects %}
+            <div>
+              <div class="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
+                <a href="{% url 'tasks:detail' p.pk %}" class="font-medium text-indigo-700 hover:underline">{{ p.title }}</a>
+                {% if p.cur_step %}<span class="text-xs text-slate-500">Bước: {{ p.cur_step.name }}{% if p.cur_step.assignee and p.cur_step.assignee_id != row.user.pk %} ({{ p.cur_step.assignee }}){% endif %}</span>{% endif %}
+              </div>
+              <div class="mt-1 max-w-xs">{% include "availability/_progress.html" with pct=p.pct %}</div>
+            </div>
+          {% empty %}
+            <span class="text-sm text-slate-400">Không có đầu việc đang thực hiện</span>
+          {% endfor %}
+        </div>
+        <div class="md:w-20 md:text-right">
+          {% if row.overdue %}
+            <span class="inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">{{ row.overdue }} việc trễ</span>
+          {% else %}
+            <span class="text-xs text-slate-400">—</span>
+          {% endif %}
+        </div>
+      </li>
+    {% empty %}
+      <li class="px-5 py-6 text-center text-sm text-slate-500">Chưa có giảng viên nào trong hệ thống.</li>
+    {% endfor %}
+  </ul>
+  <div class="border-t px-5 py-2 text-right text-xs text-slate-400">Cập nhật lúc {{ now|date:"H:i" }} · tự làm mới mỗi phút</div>
+</div>

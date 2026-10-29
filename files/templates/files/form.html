@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{% if is_edit %}Sửa tài liệu{% else %}Tải lên tài liệu{% endif %}{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-2xl">
+  <a href="{% if is_edit %}{% url 'files:detail' doc.pk %}{% else %}{% url 'files:search' %}{% endif %}" class="text-sm text-indigo-600 hover:underline">← Quay lại</a>
+  <h1 class="mb-4 mt-2 text-2xl font-semibold">{% if is_edit %}Sửa tài liệu{% else %}Tải lên tài liệu{% endif %}</h1>
+
+  <form method="post" enctype="multipart/form-data" class="space-y-4 rounded-xl border bg-white p-5 shadow-sm">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% if is_edit and doc.file %}
+      <p class="text-sm text-slate-600">File hiện tại: <a href="{% url 'files:download' doc.pk %}" class="text-indigo-600 hover:underline">{{ doc.download_filename }}</a></p>
+    {% endif %}
+    {% for field in form %}
+      <div>
+        <label for="{{ field.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-700">{{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="mt-1 text-xs text-slate-500">{{ field.help_text }}</p>{% endif %}
+        {% for err in field.errors %}<p class="mt-1 text-sm text-red-600">{{ err }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+    <div class="flex flex-wrap items-center gap-3 pt-2">
+      <button type="submit" class="rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">{% if is_edit %}Lưu thay đổi{% else %}Tải lên{% endif %}</button>
+      <span class="text-xs text-slate-500">Nội dung file sẽ được trích xuất để phục vụ tìm kiếm.</span>
+    </div>
+  </form>
+</div>
+<script>
+  // Tự điền tên tài liệu theo tên file nếu người dùng chưa nhập.
+  (function () {
+    var file = document.getElementById("id_file");
+    var name = document.getElementById("id_name");
+    if (!file || !name) return;
+    var auto = !name.value;
+    name.addEventListener("input", function () { auto = !name.value; });
+    file.addEventListener("change", function () {
+      if (auto && file.files.length) { name.value = file.files[0].name; }
+    });
+  })();
+</script>
+{% endblock %}

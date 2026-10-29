@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{% if project %}Sửa đầu việc{% else %}Đầu việc mới{% endif %}{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-3xl">
+  <a href="{% if project %}{% url 'tasks:detail' project.pk %}{% else %}{% url 'tasks:list' %}{% endif %}" class="text-sm text-indigo-600 hover:underline">← Quay lại</a>
+  <h1 class="mt-2 text-2xl font-semibold">{% if project %}Sửa đầu việc{% else %}Tạo đầu việc mới{% endif %}</h1>
+  {% if not project %}
+    <p class="mt-1 text-sm text-slate-500">Với loại Workshop và Working paper, hệ thống sẽ tự tạo sẵn các bước mặc định.</p>
+  {% endif %}
+  <form method="post" class="mt-4 space-y-5 rounded-xl border bg-white p-5 shadow-sm">
+    {% csrf_token %}
+    {% include "tasks/_form_fields.html" %}
+    <div class="flex flex-wrap justify-end gap-2 border-t pt-4">
+      <a href="{% if project %}{% url 'tasks:detail' project.pk %}{% else %}{% url 'tasks:list' %}{% endif %}" class="rounded border px-4 py-2 hover:bg-slate-50">Huỷ</a>
+      <button type="submit" class="rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">{% if project %}Lưu thay đổi{% else %}Tạo đầu việc{% endif %}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Quản lý công việc{% endblock %} · Khoa</title>
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+{% if user.is_authenticated %}
+  <header class="border-b bg-white">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+      <a href="{% url 'dashboard' %}" class="font-semibold text-indigo-700">📋 Quản lý công việc</a>
+      <nav class="flex flex-wrap gap-1 text-sm">
+        {% url 'dashboard' as u %}<a href="{{ u }}" class="rounded px-3 py-1.5 hover:bg-slate-100 {% if request.path == u %}bg-indigo-50 text-indigo-700{% endif %}">Tổng quan</a>
+        {% url 'tasks:list' as u %}<a href="{{ u }}" class="rounded px-3 py-1.5 hover:bg-slate-100 {% if u in request.path %}bg-indigo-50 text-indigo-700{% endif %}">{% if user.is_boss %}Đầu việc{% else %}Việc của tôi{% endif %}</a>
+        {% url 'approvals:list' as u %}<a href="{{ u }}" class="rounded px-3 py-1.5 hover:bg-slate-100 {% if u in request.path %}bg-indigo-50 text-indigo-700{% endif %}">Tờ trình</a>
+        {% url 'availability:schedule' as u %}<a href="{{ u }}" class="rounded px-3 py-1.5 hover:bg-slate-100 {% if u in request.path %}bg-indigo-50 text-indigo-700{% endif %}">Lịch dạy</a>
+        {% url 'files:search' as u %}<a href="{{ u }}" class="rounded px-3 py-1.5 hover:bg-slate-100 {% if u in request.path %}bg-indigo-50 text-indigo-700{% endif %}">Tài liệu</a>
+        {% if user.is_boss %}<a href="{% url 'admin:index' %}" class="rounded px-3 py-1.5 hover:bg-slate-100">Quản trị</a>{% endif %}
+      </nav>
+      <div class="ml-auto flex items-center gap-3 text-sm">
+        <span class="text-slate-500">{{ user }}{% if user.is_boss %} · <span class="text-indigo-600">Sếp</span>{% endif %}</span>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+          <button class="rounded border px-3 py-1 hover:bg-slate-100">Đăng xuất</button>
+        </form>
+      </div>
+    </div>
+  </header>
+{% endif %}
+  <main class="mx-auto max-w-7xl px-4 py-6">
+    {% if messages %}
+      <div class="mb-4 space-y-2">
+        {% for m in messages %}
+          <div class="rounded border px-4 py-2 text-sm {% if m.tags == 'error' %}border-red-200 bg-red-50 text-red-800{% else %}border-green-200 bg-green-50 text-green-800{% endif %}">{{ m }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
